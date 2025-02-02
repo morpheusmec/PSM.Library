@@ -1,5 +1,20 @@
 #include "PSM2.h"
 
+#ifdef PUMP_PIN_ACTIVE_LOW
+  #define PUMP_ON LOW
+  #define PUMP_MODE OUTPUT_OPEN_DRAIN
+#else
+  #define PUMP_ON HIGH
+  #define PUMP_MODE OUTPUT
+#endif
+#ifdef HEATER_PIN_ACTIVE_LOW
+  #define HEATER_ON LOW
+  #define HEATER_MODE OUTPUT_OPEN_DRAIN
+#else
+  #define HEATER_ON HIGH
+  #define HEATER_MODE OUTPUT
+#endif
+
 PSM2* _thePSM2;
 
 PSM2::PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char controlPin2, unsigned int range, int mode, unsigned char divider, unsigned char divider2, unsigned char interruptMinTimeDiff) {
@@ -8,8 +23,12 @@ PSM2::PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char contr
   pinMode(sensePin, INPUT_PULLUP);
   PSM2::_sensePin = sensePin;
 
-  pinMode(controlPin, OUTPUT);
+  digitalWrite(controlPin, !PUMP_ON);
+  pinMode(controlPin, PUMP_MODE);
   PSM2::_controlPin = controlPin;
+
+  digitalWrite(controlPin2, !HEATER_ON);
+  pinMode(controlPin2, HEATER_MODE);
   PSM2::_controlPin2 = controlPin2;
 
   PSM2::_divider = divider > 0 ? divider : 1;
@@ -165,19 +184,18 @@ void PSM2::calculateSkip2(void) {
     PSM2::_skip2 = true;
   }
 }
-
 void PSM2::updateControl(bool forceDisable) {
   if (forceDisable || PSM2::_skip) {
-    digitalWrite(PSM2::_controlPin, LOW);
+    digitalWrite(PSM2::_controlPin, !PUMP_ON);
   }
   else {
-    digitalWrite(PSM2::_controlPin, HIGH);
+    digitalWrite(PSM2::_controlPin, PUMP_ON);
   }
   if (PSM2::_skip2) {
-    digitalWrite(PSM2::_controlPin2, LOW);
+    digitalWrite(PSM2::_controlPin2, !HEATER_ON);
   }
   else {
-    digitalWrite(PSM2::_controlPin2, HIGH);
+    digitalWrite(PSM2::_controlPin2, HEATER_ON);
   }
 }
 

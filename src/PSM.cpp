@@ -1,5 +1,13 @@
 #include "PSM.h"
 
+#ifdef PUMP_PIN_ACTIVE_LOW
+  #define PUMP_ON LOW
+  #define PUMP_MODE OUTPUT_OPEN_DRAIN
+#else
+  #define PUMP_ON HIGH
+  #define PUMP_MODE OUTPUT
+#endif
+
 PSM* _thePSM;
 
 PSM::PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, int mode, unsigned char divider, unsigned char interruptMinTimeDiff) {
@@ -8,7 +16,8 @@ PSM::PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, i
   pinMode(sensePin, INPUT_PULLUP);
   PSM::_sensePin = sensePin;
 
-  pinMode(controlPin, OUTPUT);
+  digitalWrite(controlPin, !PUMP_ON);
+  pinMode(controlPin, PUMP_MODE);
   PSM::_controlPin = controlPin;
 
   PSM::_divider = divider > 0 ? divider : 1;
@@ -111,10 +120,10 @@ void PSM::calculateSkip(void) {
 
 void PSM::updateControl(bool forceDisable) {
   if (forceDisable || PSM::_skip) {
-    digitalWrite(PSM::_controlPin, LOW);
+    digitalWrite(PSM::_controlPin, !PUMP_ON);
   }
   else {
-    digitalWrite(PSM::_controlPin, HIGH);
+    digitalWrite(PSM::_controlPin, PUMP_ON);
   }
 }
 
