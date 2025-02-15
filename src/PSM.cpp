@@ -7,13 +7,19 @@
   #define PUMP_ON HIGH
   #define PUMP_MODE OUTPUT
 #endif
+#ifdef ZC_EXT_PULLUP_ONLY
+  #define ZC_MODE INPUT
+#else
+  #define ZC_MODE INPUT_PULLUP
+#endif
+
 
 PSM* _thePSM;
 
 PSM::PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, int mode, unsigned char divider, unsigned char interruptMinTimeDiff) {
   _thePSM = this;
 
-  pinMode(sensePin, INPUT_PULLUP);
+  pinMode(sensePin, ZC_MODE);
   PSM::_sensePin = sensePin;
 
   digitalWrite(controlPin, !PUMP_ON);

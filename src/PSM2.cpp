@@ -7,6 +7,11 @@
   #define PUMP_ON HIGH
   #define PUMP_MODE OUTPUT
 #endif
+#ifdef ZC_EXT_PULLUP_ONLY
+  #define ZC_MODE INPUT
+#else
+  #define ZC_MODE INPUT_PULLUP
+#endif
 #ifdef HEATER_PIN_ACTIVE_LOW
   #define HEATER_ON LOW
   #define HEATER_MODE OUTPUT_OPEN_DRAIN
@@ -15,12 +20,13 @@
   #define HEATER_MODE OUTPUT
 #endif
 
+
 PSM2* _thePSM2;
 
 PSM2::PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char controlPin2, unsigned int range, int mode, unsigned char divider, unsigned char divider2, unsigned char interruptMinTimeDiff) {
   _thePSM2 = this;
 
-  pinMode(sensePin, INPUT_PULLUP);
+  pinMode(sensePin, ZC_MODE);
   PSM2::_sensePin = sensePin;
 
   digitalWrite(controlPin, !PUMP_ON);
