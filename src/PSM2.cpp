@@ -197,7 +197,7 @@ void PSM2::updateControl(bool forceDisable) {
   else {
     digitalWrite(PSM2::_controlPin, PUMP_ON);
   }
-  if (PSM2::_skip2) {
+  if (forceDisable || PSM2::_skip2) {
     digitalWrite(PSM2::_controlPin2, !HEATER_ON);
   }
   else {
