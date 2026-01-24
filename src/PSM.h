@@ -6,7 +6,7 @@
 class PSM
 {
 public:
-  PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, int mode = RISING, unsigned char divider = 1, unsigned char interruptMinTimeDiff = 0);
+  PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, int mode = RISING, unsigned char divider = 1, unsigned char interruptMinTimeDiff = 0, unsigned long startDelayUs = 0);
 
   void initTimer(uint16_t delay, TIM_TypeDef* timerInstance = TIM1);
 
@@ -43,7 +43,10 @@ private:
   volatile long _counter;
   volatile long _stopAfter;
   volatile unsigned long _lastMillis = 0;
-
+  volatile bool _waiting;
+  
+  unsigned long _startDelayUs;
+  uint32_t _timerLength;
   bool _psmIntervalTimerInitialized = false;
   HardwareTimer* _psmIntervalTimer;
 };

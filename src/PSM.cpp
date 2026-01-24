@@ -16,7 +16,7 @@
 
 PSM* _thePSM;
 
-PSM::PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, int mode, unsigned char divider, unsigned char interruptMinTimeDiff) {
+PSM::PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, int mode, unsigned char divider, unsigned char interruptMinTimeDiff, unsigned long startDelayUs) {
   _thePSM = this;
 
   pinMode(sensePin, ZC_MODE);
@@ -36,6 +36,7 @@ PSM::PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, i
 
   PSM::_range = range;
   PSM::_interruptMinTimeDiff = interruptMinTimeDiff;
+  PSM::_startDelayUs = startDelayUs;
 }
 
 void onPSMInterrupt() __attribute__((weak));
@@ -55,14 +56,26 @@ void PSM::onZCInterrupt(void) {
   _thePSM->calculateSkipFromZC();
 
   if (_thePSM->_psmIntervalTimerInitialized) {
-    _thePSM->_psmIntervalTimer->setCount(0);
+    if (_thePSM->_startDelayUs > 0){
+      _thePSM->_waiting = true;
+      _thePSM->_psmIntervalTimer->setCount(_thePSM->_timerLength - _thePSM->_startDelayUs);
+    } else {
+      _thePSM->_waiting = false;
+      _thePSM->_psmIntervalTimer->setCount(0);
+    }
     _thePSM->_psmIntervalTimer->resume();
   }
 }
 
 void PSM::onPSMTimerInterrupt(void) {
-  _thePSM->_psmIntervalTimer->pause();
-  _thePSM->updateControl(true);
+  if (_thePSM->_waiting){
+    _thePSM->_psmIntervalTimer->setCount(0);
+    _thePSM->_waiting = false;
+    _thePSM->updateControl(false);
+  }else{
+    _thePSM->_psmIntervalTimer->pause();
+    _thePSM->updateControl(true);
+  }
 }
 
 void PSM::set(unsigned int value) {
@@ -94,7 +107,9 @@ void PSM::calculateSkipFromZC(void) {
   else {
     _thePSM->_dividerCounter++;
   }
-  _thePSM->updateControl(false);
+  if (!_thePSM->_psmIntervalTimerInitialized){
+    _thePSM->updateControl(false);
+  }
 }
 
 void PSM::calculateSkip(void) {
@@ -177,10 +192,10 @@ void PSM::shiftDividerCounter(char value) {
 }
 
 void PSM::initTimer(uint16_t delay, TIM_TypeDef* timerInstance) {
-  uint32_t us = delay > 1000u ? delay : delay > 55u ? 5500u : 6600u;
+  PSM::_timerLength = delay > 1000u ? delay : delay > 55u ? 5500u : 6600u;
 
   PSM::_psmIntervalTimer = new HardwareTimer(timerInstance);
-  PSM::_psmIntervalTimer->setOverflow(us, MICROSEC_FORMAT);
+  PSM::_psmIntervalTimer->setOverflow(PSM::_timerLength, MICROSEC_FORMAT);
   PSM::_psmIntervalTimer->setInterruptPriority(0, 0);
   PSM::_psmIntervalTimer->attachInterrupt(onPSMTimerInterrupt);
 

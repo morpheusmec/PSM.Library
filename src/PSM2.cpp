@@ -23,7 +23,7 @@
 
 PSM2* _thePSM2;
 
-PSM2::PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char controlPin2, unsigned int range, int mode, unsigned char divider, unsigned char divider2, unsigned char interruptMinTimeDiff) {
+PSM2::PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char controlPin2, unsigned int range, int mode, unsigned char divider, unsigned char divider2, unsigned char interruptMinTimeDiff, unsigned long startDelayUs) {
   _thePSM2 = this;
 
   pinMode(sensePin, ZC_MODE);
@@ -48,6 +48,7 @@ PSM2::PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char contr
 
   PSM2::_range = range;
   PSM2::_interruptMinTimeDiff = interruptMinTimeDiff;
+  PSM2::_startDelayUs = startDelayUs;
 }
 
 void onPSMInterrupt() __attribute__((weak));
@@ -67,14 +68,26 @@ void PSM2::onZCInterrupt(void) {
   _thePSM2->calculateSkipFromZC();
 
   if (_thePSM2->_psmIntervalTimerInitialized) {
-    _thePSM2->_psmIntervalTimer->setCount(0);
+    if (_thePSM2->_startDelayUs > 0){
+      _thePSM2->_waiting = true;
+      _thePSM2->_psmIntervalTimer->setCount(_thePSM2->_timerLength - _thePSM2->_startDelayUs);
+    } else {
+      _thePSM2->_waiting = false;
+      _thePSM2->_psmIntervalTimer->setCount(0);
+    }
     _thePSM2->_psmIntervalTimer->resume();
   }
 }
 
 void PSM2::onPSMTimerInterrupt(void) {
-  _thePSM2->_psmIntervalTimer->pause();
-  _thePSM2->updateControl(true);
+  if (_thePSM2->_waiting){
+    _thePSM2->_psmIntervalTimer->setCount(0);
+    _thePSM2->_waiting = false;
+    _thePSM2->updateControl(false);
+  }else{
+    _thePSM2->_psmIntervalTimer->pause();
+    _thePSM2->updateControl(true);
+  }
 }
 
 void PSM2::set(unsigned int value) {
@@ -133,8 +146,10 @@ void PSM2::calculateSkipFromZC(void) {
   }
   else {
     _thePSM2->_dividerCounter2++;
-  }  
-  _thePSM2->updateControl(false);
+  }
+  if (!_thePSM2->_psmIntervalTimerInitialized){
+    _thePSM2->updateControl(false);
+  }
 }
 
 void PSM2::calculateSkip(void) {
@@ -261,10 +276,10 @@ void PSM2::shiftDividerCounter2(char value) {
 }
 
 void PSM2::initTimer(uint16_t delay, TIM_TypeDef* timerInstance) {
-  uint32_t us = delay > 1000u ? delay : delay > 55u ? 5500u : 6600u;
+  PSM2::_timerLength = delay > 1000u ? delay : delay > 55u ? 5500u : 6600u;
 
   PSM2::_psmIntervalTimer = new HardwareTimer(timerInstance);
-  PSM2::_psmIntervalTimer->setOverflow(us, MICROSEC_FORMAT);
+  PSM2::_psmIntervalTimer->setOverflow(PSM2::_timerLength, MICROSEC_FORMAT);
   PSM2::_psmIntervalTimer->setInterruptPriority(0, 0);
   PSM2::_psmIntervalTimer->attachInterrupt(onPSMTimerInterrupt);
 

@@ -6,7 +6,7 @@
 class PSM2
 {
 public:
-  PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char controlPin2, unsigned int range, int mode = RISING, unsigned char divider = 1, unsigned char divider2 = 1, unsigned char interruptMinTimeDiff = 0);
+  PSM2(unsigned char sensePin, unsigned char controlPin, unsigned char controlPin2, unsigned int range, int mode = RISING, unsigned char divider = 1, unsigned char divider2 = 1, unsigned char interruptMinTimeDiff = 0, unsigned long startDelayUs = 0);
 
   void initTimer(uint16_t delay, TIM_TypeDef* timerInstance = TIM1);
 
@@ -51,7 +51,7 @@ private:
   volatile unsigned int _value;
   volatile unsigned int _value2;
   volatile unsigned int _a;
-   volatile unsigned int _a2;
+  volatile unsigned int _a2;
   volatile bool _skip = true;
   volatile bool _skip2 = true;
   volatile long _counter;
@@ -59,7 +59,10 @@ private:
   volatile long _stopAfter;
   volatile long _stopAfter2;
   volatile unsigned long _lastMillis = 0;
-
+  volatile bool _waiting;
+  
+  unsigned long _startDelayUs;
+  uint32_t _timerLength;
   bool _psmIntervalTimerInitialized = false;
   HardwareTimer* _psmIntervalTimer;
 };
